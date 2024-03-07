@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "./heartbeat";
+
+package heartbeat;
+
+service Heartbeat {
+    rpc Monitor (stream Beat) returns (MonitorReply) {}
+}
+
+message Beat {
+    string id = 1;
+    string timestamp = 2;
+}
+
+message MonitorReply {
+    bool ok = 1;
+}

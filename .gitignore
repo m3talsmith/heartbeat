@@ -1,0 +1,6 @@
+.DS_Store
+*.sw*
+/.vscode
+/.idea
+/target
+/client/deps
