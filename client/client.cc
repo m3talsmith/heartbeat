@@ -35,9 +35,7 @@ class HeartbeatClient {
         HeartbeatClient(
             std::shared_ptr<Channel> channel,
             const std::string new_id
-        ) : stub_(Heartbeat::NewStub(channel)) {
-            id = new_id;
-        }
+        ) : id(new_id), stub_(Heartbeat::NewStub(channel)) {}
         
         void StartMonitor() {
             MonitorReply reply;
