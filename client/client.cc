@@ -58,7 +58,10 @@ class HeartbeatClient {
                     beat.set_id(id);
 
                     if (!writer->Write(beat)) {
-                        break;
+                        std::cerr
+                            << "[ERROR] " << ts << ": failed to write heartbeat to server."
+                            << std::endl;
+                        exit(0);
                     }
 
                     std::this_thread::sleep_for(
@@ -68,7 +71,8 @@ class HeartbeatClient {
                 writer->WritesDone();
                 Status status = writer->Finish();
                 if (!status.ok()) {
-                    std::cerr << "error: StartMonitor rpc failed." << std::endl;
+                    std::cerr << "[ERROR] open rpc failed." << std::endl;
+                    exit(0);
                 }
             });
             std::cout << "done" << std::endl;
