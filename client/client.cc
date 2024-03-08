@@ -20,8 +20,6 @@ ABSL_FLAG(std::string, id, "unknown", "Heartbeat client ID");
 
 using grpc::Channel;
 using grpc::ClientContext;
-using grpc::ClientReader;
-using grpc::ClientReaderWriter;
 using grpc::ClientWriter;
 using grpc::Status;
 using heartbeat::Heartbeat;
