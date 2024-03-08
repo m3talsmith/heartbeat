@@ -26,19 +26,58 @@ using heartbeat::Heartbeat;
 using heartbeat::Beat;
 using heartbeat::MonitorReply;
 
+std::string get_timestamp() {
+    std::chrono::time_point timestamp = std::chrono::system_clock::now();
+    std::time_t tp = std::chrono::system_clock::to_time_t(timestamp);
+    std::string ts = std::ctime(&tp);
+    ts.resize(ts.size()-1);
+    return ts;
+}
+
+void fatal(std::string msg) {
+    std::string ts(get_timestamp());
+    std::cerr << "[ERROR] " << ts << ": " << msg << std::endl;
+    exit(1);
+}
+
+namespace heartbeat {
+    namespace exception {
+        class Connection : public std::exception {
+            public:
+                std::string what() {
+                    return "bad connection";
+                }
+        };
+        class Write : public std::exception {
+            public:
+                std::string what() {
+                    return "bad write";
+                }
+        };
+        class Response : public std::exception {
+            public:
+                std::string what() {
+                    return "bad response";
+                }
+        };
+    }
+}
+
 class HeartbeatClient {
     public:
         std::string id;
+        bool closed;
+
         ClientContext context;
         MonitorReply reply;
         std::unique_ptr<ClientWriter<Beat>> writer;
         std::thread monitor_thread;
-        bool closed;
 
         HeartbeatClient(
             std::shared_ptr<Channel> channel,
             const std::string new_id
         ) : id(new_id), stub_(Heartbeat::NewStub(channel)) {}
+
         ~HeartbeatClient() {
             close();
         }
@@ -48,20 +87,14 @@ class HeartbeatClient {
             writer = stub_->Monitor(&context, &reply);
             monitor_thread = std::thread([this] {
                 while (!closed) {
-                    std::chrono::time_point timestamp = std::chrono::system_clock::now();
-                    std::time_t tp = std::chrono::system_clock::to_time_t(timestamp);
-                    std::string ts = std::ctime(&tp);
-                    ts.resize(ts.size()-1);
+                    std::string ts(get_timestamp());
 
                     Beat beat;
                     beat.set_timestamp(ts);
                     beat.set_id(id);
 
                     if (!writer->Write(beat)) {
-                        std::cerr
-                            << "[ERROR] " << ts << ": failed to write heartbeat to server."
-                            << std::endl;
-                        exit(0);
+                        fatal(heartbeat::exception::Write().what());
                     }
 
                     std::this_thread::sleep_for(
@@ -71,8 +104,7 @@ class HeartbeatClient {
                 writer->WritesDone();
                 Status status = writer->Finish();
                 if (!status.ok()) {
-                    std::cerr << "[ERROR] open rpc failed." << std::endl;
-                    exit(0);
+                    fatal(heartbeat::exception::Response().what());
                 }
             });
             std::cout << "done" << std::endl;
