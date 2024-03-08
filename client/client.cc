@@ -31,41 +31,60 @@ using heartbeat::MonitorReply;
 class HeartbeatClient {
     public:
         std::string id;
+        ClientContext context;
+        MonitorReply reply;
+        std::unique_ptr<ClientWriter<Beat>> writer;
+        std::thread monitor_thread;
+        bool closed;
 
         HeartbeatClient(
             std::shared_ptr<Channel> channel,
             const std::string new_id
         ) : id(new_id), stub_(Heartbeat::NewStub(channel)) {}
-        
-        void StartMonitor() {
-            MonitorReply reply;
-            ClientContext context;
-            std::unique_ptr<ClientWriter<Beat>> writer(
-                stub_->Monitor(&context, &reply)
-            );
-            for (int i = 0; i < 10; i++) {
-                std::chrono::time_point timestamp = std::chrono::system_clock::now();
-                std::time_t tp = std::chrono::system_clock::to_time_t(timestamp);
-                std::string ts = std::ctime(&tp);
-                ts.resize(ts.size()-1);
-                Beat beat;
-                beat.set_timestamp(ts);
-                beat.set_id(id);
-                if (!writer->Write(beat)) {
-                    break;
-                }
-                std::this_thread::sleep_for(
-                    std::chrono::milliseconds(1000)
-                );
-            }
-            writer->WritesDone();
-            Status status = writer->Finish();
-            if (status.ok()) {
-                std::cout << "ok: " << reply.ok() << std::endl;
-            } else {
-                std::cout << "error: StartMonitor rpc failed." << std::endl;
-            }
+        ~HeartbeatClient() {
+            close();
         }
+
+        void open() {
+            std::cout << "opening monitor...";
+            writer = stub_->Monitor(&context, &reply);
+            monitor_thread = std::thread([this] {
+                while (!closed) {
+                    std::chrono::time_point timestamp = std::chrono::system_clock::now();
+                    std::time_t tp = std::chrono::system_clock::to_time_t(timestamp);
+                    std::string ts = std::ctime(&tp);
+                    ts.resize(ts.size()-1);
+
+                    Beat beat;
+                    beat.set_timestamp(ts);
+                    beat.set_id(id);
+
+                    if (!writer->Write(beat)) {
+                        break;
+                    }
+
+                    std::this_thread::sleep_for(
+                        std::chrono::milliseconds(1000)
+                    );
+                }
+                writer->WritesDone();
+                Status status = writer->Finish();
+                if (status.ok()) {
+                    std::cout << "ok: " << reply.ok() << std::endl;
+                } else {
+                    std::cout << "error: StartMonitor rpc failed." << std::endl;
+                }
+            });
+            std::cout << "done" << std::endl;
+        }
+
+        void close() {
+            std::cout << "closing monitor...";
+            closed = true;
+            if (monitor_thread.joinable()) monitor_thread.join();
+            std::cout << "done" << std::endl;
+        }
+
     private:
         std::unique_ptr<Heartbeat::Stub> stub_;
 };
@@ -80,7 +99,8 @@ int main(int argc, char* argv[]) {
         id
     );
 
-    client.StartMonitor();
+    client.open();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 
     return 0;
 }
