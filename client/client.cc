@@ -69,10 +69,8 @@ class HeartbeatClient {
                 }
                 writer->WritesDone();
                 Status status = writer->Finish();
-                if (status.ok()) {
-                    std::cout << "ok: " << reply.ok() << std::endl;
-                } else {
-                    std::cout << "error: StartMonitor rpc failed." << std::endl;
+                if (!status.ok()) {
+                    std::cerr << "error: StartMonitor rpc failed." << std::endl;
                 }
             });
             std::cout << "done" << std::endl;
