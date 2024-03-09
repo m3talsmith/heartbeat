@@ -34,6 +34,7 @@ endif()
 
 add_executable(client
         client.cc
+        HeartbeatMonitor.cc
         heartbeat.pb.cc
         heartbeat.grpc.pb.cc
 )
