@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v4.25.1
-// source: proto/heartbeat.proto
+// source: heartbeat.proto
 
 package heartbeat
 
@@ -135,5 +135,5 @@ var Heartbeat_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "proto/heartbeat.proto",
+	Metadata: "heartbeat.proto",
 }

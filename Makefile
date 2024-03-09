@@ -42,7 +42,7 @@ build: build_server build_client
 
 build_deps: deps
 
-build_client:
+build_client: protoc_client
 	mkdir -p ${CWD_PATH}/target
 	mkdir -p ${TEMP_PATH}/client
 	cd ${CWD_PATH}/client && \
@@ -54,13 +54,22 @@ build_server: protoc_server
 	cd ${CWD_PATH}/server && \
 		go build -o ${CWD_PATH}/target/server
 
+protoc_client:
+	protoc \
+    		--proto_path=${CWD_PATH}/proto \
+    		--cpp_out=${CWD_PATH}/client \
+    		--grpc_out=${CWD_PATH}/client \
+    		--plugin=protoc-gen-grpc=$(shell which grpc_cpp_plugin) \
+    		heartbeat.proto
+
 protoc_server:
 	protoc \
+		--proto_path=${CWD_PATH}/proto \
 		--go_out=${CWD_PATH}/server/ \
 		--go-grpc_out=${CWD_PATH}/server/ \
 		--plugin=protoc-gen-go=$(shell go env GOPATH)/bin/protoc-gen-go \
 		--plugin=protoc-gen-go-grpc=$(shell go env GOPATH)/bin/protoc-gen-go-grpc \
-		proto/heartbeat.proto
+		heartbeat.proto
 
 install: install_server install_client
 
